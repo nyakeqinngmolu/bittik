@@ -255,8 +255,8 @@ async function create(ctx, photo, currentTime) {
   const file_url = await ctx.telegram.getFileLink(file_id);
   const file_href = file_url.href;
 
-  // const watermarkName = "dh";
-  const watermarkName = "bg";
+  const watermarkName = "dh";
+  // const watermarkName = "bg";
   // const watermarkName = "np";
 
   const response = await axios({
@@ -328,8 +328,8 @@ async function create(ctx, photo, currentTime) {
         .composite([
           {
             input: watermarkNewBuffer,
-            //gravity: "southeast",
-            gravity: "northeast", // bg
+            gravity: "southeast",
+            // gravity: "northeast", // bg
           },
         ])
         .toBuffer();
@@ -383,11 +383,11 @@ async function sendScheduledPhotos() {
 
   if (
     global.isPosting &&
-    global.count > 0 
-		// &&
-    // shouldSend(currentTime, isNightTime) &&
-    // (global.lastPhotoSentTime?.hours() !== currentTime?.hours() ||
-    //   global.lastPhotoSentTime?.minute() !== currentTime?.minute())
+    global.count > 0
+    &&
+    shouldSend(currentTime, isNightTime) &&
+    (global.lastPhotoSentTime?.hours() !== currentTime?.hours() ||
+      global.lastPhotoSentTime?.minute() !== currentTime?.minute())
   ) {
     const photo = await botService.getNextPost();
 
@@ -411,16 +411,16 @@ async function sendScheduledPhotos() {
 }
 
 async function shouldSend(currentTime, isNightTime) {
-  // if (isNightTime) {
-  //   if (currentTime?.hours() > 23 || currentTime.hours() < 11) {
-  //     return false;
-  //   }
+  if (isNightTime) {
+    if (currentTime?.hours() > 23 || currentTime.hours() < 11) {
+      return false;
+    }
 
-  //   return currentTime.minute() === 0;
-  // } else {
-  //   return currentTime.minute() % 30 === 0;
-  // }
-  return true;
+    return currentTime.minute() === 0;
+  } else {
+    return currentTime.minute() % 30 === 0;
+  }
+  // return true;
 }
 
 async function sendScheduledPhoto(photo) {
@@ -466,6 +466,7 @@ async function sendScheduledPhoto(photo) {
     }
 
     global.count = await botService.getCountAll();
+
     console.log(`Photo successfully sent to ${photo.chatId}`);
   } catch (error) {
     console.error(`Error sending photo: ${error}`);
