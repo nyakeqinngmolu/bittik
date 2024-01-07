@@ -265,8 +265,7 @@ async function create(ctx, photo, currentTime) {
     responseType: "stream",
   });
 
-  const file_path =
-    "temp/" + `${file_id}.${file_info.file_path.split(".").pop()}`;
+  const file_path = `${file_id}.${file_info.file_path.split(".").pop()}`;
 
   const file_stream = fs.createWriteStream(file_path);
 
@@ -276,7 +275,7 @@ async function create(ctx, photo, currentTime) {
 
   const id = Date.now();
 
-  const newWatermarkPath = "temp/" + `${watermarkName}${id}.png`;
+  const newWatermarkPath = `${watermarkName}${id}.png`;
 
   file_stream.on("finish", async () => {
     try {
