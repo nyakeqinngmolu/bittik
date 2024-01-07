@@ -265,32 +265,18 @@ async function create(ctx, photo, currentTime) {
     responseType: "stream",
   });
 
-  const file_path = path.join(
-    __dirname,
-    "../../",
-    "temp",
-    `${file_id}.${file_info.file_path.split(".").pop()}`
-  );
+  const file_path =
+    "temp/" + `${file_id}.${file_info.file_path.split(".").pop()}`;
 
   const file_stream = fs.createWriteStream(file_path);
 
   response.data.pipe(file_stream);
 
-  const watermarkPath = path.join(
-    __dirname,
-    "../../",
-    "watermark",
-    `${watermarkName}.png`
-  );
+  const watermarkPath = "watermark/" + `${watermarkName}.png`;
 
   const id = Date.now();
 
-  const newWatermarkPath = path.join(
-    __dirname,
-    "../../",
-    "temp",
-    `${watermarkName}${id}.png`
-  );
+  const newWatermarkPath = "temp/" + `${watermarkName}${id}.png`;
 
   file_stream.on("finish", async () => {
     try {
@@ -383,8 +369,7 @@ async function sendScheduledPhotos() {
 
   if (
     global.isPosting &&
-    global.count > 0
-    &&
+    global.count > 0 &&
     shouldSend(currentTime, isNightTime) &&
     (global.lastPhotoSentTime?.hours() !== currentTime?.hours() ||
       global.lastPhotoSentTime?.minute() !== currentTime?.minute())
