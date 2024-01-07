@@ -394,7 +394,7 @@ async function sendScheduledPhotos() {
   console.log(`Кількість фото у черзі: ${global.count}`);
 }
 
-async function shouldSend(currentTime, isNightTime) {
+function shouldSend(currentTime, isNightTime) {
   if (isNightTime) {
     if (currentTime?.hours() > 23 || currentTime.hours() < 11) {
       return false;
