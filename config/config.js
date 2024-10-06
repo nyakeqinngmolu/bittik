@@ -1,14 +1,12 @@
+
 require('dotenv').config();
 
 const DB_URI = process.env.DB_URL;
 
-const settings= {
+const settings = {
   url: DB_URI,
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false,
-    }
+    ssl: false // Отключаем SSL
   }
 };
 
