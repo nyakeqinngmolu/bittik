@@ -1,4 +1,4 @@
-const { Settings1: Settings } = require("../../models/settings1");
+const { Settings3: Settings } = require("../../models/settings3");
 require("dotenv").config();
 
 
