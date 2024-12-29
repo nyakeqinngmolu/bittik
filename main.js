@@ -379,6 +379,7 @@ async function photoHendling(file_id, file_unique_id) {
     });
 
     file_path = `${file_id}.${file_info.file_path.split(".").pop()}`;
+    file_path = file_path.replace(/[^a-zA-Z0-9._-]/g, "_");
 
     file_stream = fs.createWriteStream(file_path);
 
