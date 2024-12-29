@@ -20,6 +20,7 @@ const userId = +process.env.TG_USER;
 let lastPhotoSentTime = null;
 let sign = process.env.CHANEL_SIGN;
 let count = 0;
+let countRaw = 0;
 let settings = null;
 
 async function startBot() {
@@ -34,6 +35,7 @@ async function startBot() {
 
     count = await botService.getCountAll();
     settings = await settingsService.getSettings();
+    await setCountRaw();
 
     await bot.telegram.deleteWebhook();
 
@@ -180,7 +182,7 @@ async function getCount(ctx) {
 }
 
 async function getPicturesCount(ctx) {
-  ctx.reply(`Кількість фото у черзі: ${count}`);
+  ctx.reply(`Кількість фото у черзі: ${count}, не обробленні: ${countRaw}`);
 }
 
 async function getLastDate(ctx) {
@@ -280,6 +282,21 @@ async function deleteAll() {
   count = await botService.getCountAll();
 }
 
+async function createPhoto1(ctx) {
+  const photo = ctx.message.photo[ctx.message.photo.length - 1];
+
+  const currentTime = moment().tz("Europe/Kiev");
+
+  const chatId = ctx.message.chat.id;
+  const file_id = photo.file_id;
+  const file_unique_id = photo.file_unique_id;
+  const media_group_id = ctx.message.media_group_id;
+
+  await createRawPhoto(photo, currentTime, chatId, file_id, file_unique_id, media_group_id, ctx);
+
+  await photoHendling(photo, currentTime, chatId, file_id, file_unique_id, media_group_id, ctx);
+}
+
 async function createPhoto(ctx) {
   const photo = ctx.message.photo[ctx.message.photo.length - 1];
 
@@ -290,6 +307,17 @@ async function createPhoto(ctx) {
   const file_unique_id = photo.file_unique_id;
   const media_group_id = ctx.message.media_group_id;
 
+  await createRawPhoto(photo, currentTime, chatId, file_id, file_unique_id, media_group_id, ctx);
+
+  await setCountRaw();
+}
+
+async function setCountRaw() {
+  countRaw = await botService.getCountAllRaw();
+  console.log('setCountRaw', countRaw);
+}
+
+async function createRawPhoto(photo, currentTime, chatId, file_id, file_unique_id, media_group_id, ctx) {
   let description = "";
 
   if (
@@ -332,26 +360,40 @@ async function createPhoto(ctx) {
     description,
     messageId: ctx.message.message_id,
   });
+}
 
-  const file_info = await ctx.telegram.getFile(file_id);
-  const file_url = await ctx.telegram.getFileLink(file_id);
-  const file_href = file_url.href;
+async function photoHendling(file_id, file_unique_id) {
+  let file_path;
+  let file_stream;
+
+  try {
+    const file_info = await bot.telegram.getFile(file_id);
+    const file_url = await bot.telegram.getFileLink(file_id);
+
+    const file_href = file_url.href;
+
+    const response = await axios({
+        method: "get",
+        url: file_href,
+        responseType: "stream",
+    });
+
+    file_path = `${file_id}.${file_info.file_path.split(".").pop()}`;
+
+    file_stream = fs.createWriteStream(file_path);
+
+    file_stream.on("error", (error) => {
+      console.error("Ошибка при записи файла:", error.message);
+    });
+
+    response.data.pipe(file_stream);
+  } catch (error) {
+    console.error("Ошибка при обработке файла:", error.message);
+  }
 
   const watermarkName = "dh";
   // const watermarkName = "bg";
   // const watermarkName = "np";
-
-  const response = await axios({
-    method: "get",
-    url: file_href,
-    responseType: "stream",
-  });
-
-  const file_path = `${file_id}.${file_info.file_path.split(".").pop()}`;
-
-  const file_stream = fs.createWriteStream(file_path);
-
-  response.data.pipe(file_stream);
 
   const watermarkPath = "watermark/" + `${watermarkName}.png`;
 
@@ -448,6 +490,17 @@ async function sendScheduledPhotos() {
   const currentTime = moment().tz("Europe/Kiev");
   const isNightTime = currentTime.hour() >= 23 || currentTime.hour() < 20;
 
+  if (countRaw) {
+    const photo = await botService.getNextRawPost();
+
+    if(!photo) {
+      await setCountRaw();
+      return;
+    }
+    await photoHendling(photo.file_id, photo.file_unique_id);
+    await setCountRaw();
+  }
+
   if (
     settings.isPosting &&
     count > 0 &&
@@ -456,6 +509,11 @@ async function sendScheduledPhotos() {
       lastPhotoSentTime?.minute() !== currentTime?.minute())
   ) {
     const photo = await botService.getNextPost();
+
+    if(!photo.imageUrl) {
+      await setCountRaw();
+      return;
+    }
 
     await deleteFromBin(currentTime);
 
@@ -470,10 +528,11 @@ async function sendScheduledPhotos() {
     }
 
     console.log(`Фото відправлено о ${currentTime.format("HH:mm")}`);
+    await setCountRaw();
     lastPhotoSentTime = moment().tz("Europe/Kiev");
   }
 
-  console.log(`Кількість фото у черзі: ${count}`);
+  console.log(`Кількість фото у черзі: ${count}, countRaw: ${countRaw}`);
 }
 
 function shouldSend(currentTime, isNightTime) {
